@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# venv
+.venv/
+.venv312/
+.venv311/
+.env
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Data outputs (do NOT commit)
+data/
+chroma_db*/
+logs/
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db

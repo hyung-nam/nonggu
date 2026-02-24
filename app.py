@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 from pathlib import Path
 from typing import Optional, Tuple, List
@@ -307,65 +307,65 @@ def ask_frame_engine(llm: OpenAI, col, user_text: str, image_bytes: Optional[byt
     return answer, refs, model
 
 # ========= UI =========
-st.set_page_config(page_title=”농구천재 프레임 채팅”, layout=”centered”)
+st.set_page_config(page_title="농구천재 프레임 채팅", layout="centered")
 st.markdown(
-    “””
+    """
 <style>
 .block-container {max-width: 860px; padding-top: 1.0rem; padding-bottom: 2rem;}
 footer {visibility: hidden;}
 </style>
-“””,
+""",
     unsafe_allow_html=True,
 )
 
-st.title(“농구천재 프레임 채팅”)
-st.caption(“텍스트 입력 + URL 자동 감지 + 파일/이미지 첨부 (클립 아이콘) → 프레임 해석”)
+st.title("농구천재 프레임 채팅")
+st.caption("텍스트 입력 + URL 자동 감지 + 파일/이미지 첨부 (클립 아이콘) → 프레임 해석")
 
 # session state
-if “messages” not in st.session_state:
+if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # render chat history
 for m in st.session_state.messages:
-    with st.chat_message(m[“role”]):
-        st.markdown(m[“content”])
-        meta = m.get(“meta”) or {}
-        if meta.get(“model”):
-            st.caption(f”model: {meta['model']}”)
-        if meta.get(“attachments”):
-            st.caption(“attachments: “ + “, “.join(meta[“attachments”]))
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
+        meta = m.get("meta") or {}
+        if meta.get("model"):
+            st.caption(f"model: {meta['model']}")
+        if meta.get("attachments"):
+            st.caption("attachments: " + ", ".join(meta["attachments"]))
 
-# ── unified chat input ──
+# unified chat input
 prompt = st.chat_input(
-    “질문을 입력하세요 (URL 붙여넣기 가능, 클립 아이콘으로 파일 첨부)”,
-    accept_file=”multiple”,
-    file_type=[“png”, “jpg”, “jpeg”, “webp”, “txt”, “md”, “csv”, “json”, “pdf”],
+    "질문을 입력하세요 (URL 붙여넣기 가능, 클립 아이콘으로 파일 첨부)",
+    accept_file="multiple",
+    file_type=["png", "jpg", "jpeg", "webp", "txt", "md", "csv", "json", "pdf"],
 )
 
-# ── templates below input ──
-with st.expander(“템플릿 보기”):
-    st.markdown(“**기본 템플릿** — 복사해서 입력창에 붙여넣기”)
+# templates below input
+with st.expander("템플릿 보기"):
+    st.markdown("**기본 템플릿** -- 복사해서 입력창에 붙여넣기")
     st.code(TEMPLATE_1, language=None)
-    st.markdown(“**간단 템플릿**”)
+    st.markdown("**간단 템플릿**")
     st.code(TEMPLATE_2, language=None)
 
-# ── process submission ──
+# process submission
 if prompt:
-    user_text = (prompt.text or “”).strip()
+    user_text = (prompt.text or "").strip()
     attached_files = prompt.files or []
 
     if not user_text and not attached_files:
-        st.warning(“메시지를 입력해줘.”)
+        st.warning("메시지를 입력해줘.")
         st.stop()
 
     # URL auto-detection from text
-    url_title = “”
-    url_text = “”
+    url_title = ""
+    url_text = ""
     attachments = []
 
-    urls = re.findall(r'https?://[^\s<>”\')\]]+', user_text)
+    urls = re.findall(r'https?://[^\s<>"\x27)\]]+', user_text)
     if urls:
-        attachments.append(“url”)
+        attachments.append("url")
         try:
             url_title, url_text = fetch_url_text(urls[0])
         except Exception:
@@ -376,38 +376,38 @@ if prompt:
     file_summaries = []
 
     for f in attached_files[:5]:
-        ext = f.name.lower().rsplit(“.”, 1)[-1] if “.” in f.name else “”
+        ext = f.name.lower().rsplit(".", 1)[-1] if "." in f.name else ""
         raw = f.read()
 
-        if ext in (“png”, “jpg”, “jpeg”, “webp”):
+        if ext in ("png", "jpg", "jpeg", "webp"):
             if image_bytes is None:
                 image_bytes = raw
-            if “image” not in attachments:
-                attachments.append(“image”)
-        elif ext in (“txt”, “md”, “csv”, “json”):
+            if "image" not in attachments:
+                attachments.append("image")
+        elif ext in ("txt", "md", "csv", "json"):
             text = read_text_file_bytes(f.name, raw)
             file_summaries.append((f.name, text.strip()[:12000]))
-            if “file” not in attachments:
-                attachments.append(“file”)
-        elif ext == “pdf”:
+            if "file" not in attachments:
+                attachments.append("file")
+        elif ext == "pdf":
             text = extract_pdf_text(raw)
             file_summaries.append((f.name, text.strip()))
-            if “file” not in attachments:
-                attachments.append(“file”)
+            if "file" not in attachments:
+                attachments.append("file")
 
     # Display user message
-    display_text = user_text if user_text else “(첨부 파일만)”
+    display_text = user_text if user_text else "(첨부 파일만)"
     st.session_state.messages.append({
-        “role”: “user”,
-        “content”: display_text,
-        “meta”: {“attachments”: attachments},
+        "role": "user",
+        "content": display_text,
+        "meta": {"attachments": attachments},
     })
 
-    with st.chat_message(“assistant”):
+    with st.chat_message("assistant"):
         try:
             col, llm = load_engine()
-            with st.spinner(“분석 중...”):
-                query_text = user_text if user_text else “첨부 파일을 분석해주세요.”
+            with st.spinner("분석 중..."):
+                query_text = user_text if user_text else "첨부 파일을 분석해주세요."
                 answer, refs, used_model = ask_frame_engine(
                     llm, col, query_text,
                     image_bytes,
@@ -415,15 +415,15 @@ if prompt:
                     file_summaries,
                 )
             st.markdown(answer)
-            st.caption(f”model: {used_model}”)
+            st.caption(f"model: {used_model}")
         except Exception as e:
-            answer = f”에러: {e}”
-            used_model = “”
+            answer = f"에러: {e}"
+            used_model = ""
             st.error(answer)
 
     st.session_state.messages.append({
-        “role”: “assistant”,
-        “content”: answer,
-        “meta”: {“model”: used_model, “attachments”: attachments},
+        "role": "assistant",
+        "content": answer,
+        "meta": {"model": used_model, "attachments": attachments},
     })
     st.rerun()

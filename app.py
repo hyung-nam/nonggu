@@ -307,154 +307,123 @@ def ask_frame_engine(llm: OpenAI, col, user_text: str, image_bytes: Optional[byt
     return answer, refs, model
 
 # ========= UI =========
-st.set_page_config(page_title="송근용 프레임 채팅", layout="centered")
+st.set_page_config(page_title=”농구천재 프레임 채팅”, layout=”centered”)
 st.markdown(
-    """
+    “””
 <style>
 .block-container {max-width: 860px; padding-top: 1.0rem; padding-bottom: 2rem;}
-/* 입력 영역을 아래쪽에 붙여보이게 */
 footer {visibility: hidden;}
 </style>
-""",
-    unsafe_allow_html=True
+“””,
+    unsafe_allow_html=True,
 )
 
-st.title("송근용 프레임 채팅")
-st.caption("OpenAI 느낌의 간결한 채팅 UI + URL/파일/이미지 첨부(드래그&드롭) + 프레임 해석")
+st.title(“농구천재 프레임 채팅”)
+st.caption(“텍스트 입력 + URL 자동 감지 + 파일/이미지 첨부 (클립 아이콘) → 프레임 해석”)
 
 # session state
-if "messages" not in st.session_state:
+if “messages” not in st.session_state:
     st.session_state.messages = []
-if "composer" not in st.session_state:
-    st.session_state.composer = ""
-if "pending_url" not in st.session_state:
-    st.session_state.pending_url = ""
-if "url_cache" not in st.session_state:
-    st.session_state.url_cache = {"url":"", "title":"", "text":""}
-if "pending_image" not in st.session_state:
-    st.session_state.pending_image = None
-if "pending_files" not in st.session_state:
-    st.session_state.pending_files = []  # list of (label, text)
 
-# render chat
+# render chat history
 for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.markdown(m["content"])
-        meta = m.get("meta") or {}
-        if meta.get("model"):
-            st.caption(f"model: {meta['model']}")
-        if meta.get("attachments"):
-            st.caption("attachments: " + ", ".join(meta["attachments"]))
+    with st.chat_message(m[“role”]):
+        st.markdown(m[“content”])
+        meta = m.get(“meta”) or {}
+        if meta.get(“model”):
+            st.caption(f”model: {meta['model']}”)
+        if meta.get(“attachments”):
+            st.caption(“attachments: “ + “, “.join(meta[“attachments”]))
 
-# composer area (like ChatGPT input)
-st.divider()
-
-# 템플릿/첨부를 같은 “드롭다운”에 몰아넣기
-with st.expander("템플릿/첨부 (클릭해서 열기) — URL / 이미지 / 파일 드래그&드롭", expanded=False):
-    colA, colB = st.columns([1,1])
-
-    with colA:
-        st.subheader("템플릿")
-        if st.button("템플릿 넣기(기본)", use_container_width=True):
-            st.session_state.composer = TEMPLATE_1
-        if st.button("템플릿 넣기(간단)", use_container_width=True):
-            st.session_state.composer = TEMPLATE_2
-        st.caption("템플릿을 넣은 뒤, 필요한 부분만 채워서 보내면 품질이 더 좋아짐.")
-
-    with colB:
-        st.subheader("URL")
-        url = st.text_input("URL 붙여넣기", value=st.session_state.pending_url, placeholder="https://...", key="url_input")
-        c1, c2 = st.columns([1,1])
-        with c1:
-            if st.button("URL 가져오기", use_container_width=True):
-                if url.strip():
-                    try:
-                        title, text = fetch_url_text(url.strip())
-                        st.session_state.url_cache = {"url": url.strip(), "title": title, "text": text}
-                        st.success(f"가져옴: {title}")
-                    except Exception as e:
-                        st.error(f"URL 가져오기 실패: {e}")
-        with c2:
-            if st.button("URL 비우기", use_container_width=True):
-                st.session_state.url_cache = {"url":"", "title":"", "text":""}
-                st.success("URL 초기화")
-
-    st.subheader("첨부 업로드 (드래그&드롭)")
-    img = st.file_uploader("이미지 업로드 (png/jpg/webp)", type=["png","jpg","jpeg","webp"], key="img_upl")
-    if img is not None:
-        b = img.read()
-        st.session_state.pending_image = b
-        st.image(b, caption="업로드 이미지", use_container_width=True)
-
-    files = st.file_uploader("파일 업로드 (txt/md/csv/json/pdf)", type=["txt","md","csv","json","pdf"], accept_multiple_files=True, key="files_upl")
-    if files:
-        parsed = []
-        for f in files[:3]:  # 너무 많으면 컨텍스트 과부하 → 3개로 제한
-            label, text = parse_uploaded_file(f)
-            parsed.append((label, text))
-        st.session_state.pending_files = parsed
-        st.success(f"파일 {len(parsed)}개 준비됨(최대 3개 반영)")
-
-    if st.button("첨부 초기화", use_container_width=True):
-        st.session_state.pending_image = None
-        st.session_state.pending_files = []
-        st.session_state.url_cache = {"url":"", "title":"", "text":""}
-        st.success("첨부 초기화 완료")
-
-# message composer
-st.session_state.composer = st.text_area(
-    "메시지 작성",
-    value=st.session_state.composer,
-    height=150,
-    placeholder="여기에 질문을 입력하세요. (템플릿을 쓰면 더 좋음)",
-    label_visibility="collapsed",
+# ── unified chat input ──
+prompt = st.chat_input(
+    “질문을 입력하세요 (URL 붙여넣기 가능, 클립 아이콘으로 파일 첨부)”,
+    accept_file=”multiple”,
+    file_type=[“png”, “jpg”, “jpeg”, “webp”, “txt”, “md”, “csv”, “json”, “pdf”],
 )
 
-send = st.button("보내기", type="primary", use_container_width=True)
+# ── templates below input ──
+with st.expander(“템플릿 보기”):
+    st.markdown(“**기본 템플릿** — 복사해서 입력창에 붙여넣기”)
+    st.code(TEMPLATE_1, language=None)
+    st.markdown(“**간단 템플릿**”)
+    st.code(TEMPLATE_2, language=None)
 
-if send:
-    user_text = st.session_state.composer.strip()
-    if not user_text:
-        st.warning("메시지를 입력해줘.")
+# ── process submission ──
+if prompt:
+    user_text = (prompt.text or “”).strip()
+    attached_files = prompt.files or []
+
+    if not user_text and not attached_files:
+        st.warning(“메시지를 입력해줘.”)
         st.stop()
 
-    # attachments summary
+    # URL auto-detection from text
+    url_title = “”
+    url_text = “”
     attachments = []
-    url_title = st.session_state.url_cache.get("title","")
-    url_text  = st.session_state.url_cache.get("text","")
-    url_used  = st.session_state.url_cache.get("url","")
-    if url_used:
-        attachments.append("url")
-    if st.session_state.pending_image is not None:
-        attachments.append("image")
-    if st.session_state.pending_files:
-        attachments.append("file")
 
-    # show user message
-    st.session_state.messages.append({"role":"user","content":user_text, "meta":{"attachments": attachments}})
+    urls = re.findall(r'https?://[^\s<>”\')\]]+', user_text)
+    if urls:
+        attachments.append(“url”)
+        try:
+            url_title, url_text = fetch_url_text(urls[0])
+        except Exception:
+            pass
 
-    with st.chat_message("assistant"):
+    # File auto-classification: image vs document
+    image_bytes = None
+    file_summaries = []
+
+    for f in attached_files[:5]:
+        ext = f.name.lower().rsplit(“.”, 1)[-1] if “.” in f.name else “”
+        raw = f.read()
+
+        if ext in (“png”, “jpg”, “jpeg”, “webp”):
+            if image_bytes is None:
+                image_bytes = raw
+            if “image” not in attachments:
+                attachments.append(“image”)
+        elif ext in (“txt”, “md”, “csv”, “json”):
+            text = read_text_file_bytes(f.name, raw)
+            file_summaries.append((f.name, text.strip()[:12000]))
+            if “file” not in attachments:
+                attachments.append(“file”)
+        elif ext == “pdf”:
+            text = extract_pdf_text(raw)
+            file_summaries.append((f.name, text.strip()))
+            if “file” not in attachments:
+                attachments.append(“file”)
+
+    # Display user message
+    display_text = user_text if user_text else “(첨부 파일만)”
+    st.session_state.messages.append({
+        “role”: “user”,
+        “content”: display_text,
+        “meta”: {“attachments”: attachments},
+    })
+
+    with st.chat_message(“assistant”):
         try:
             col, llm = load_engine()
-            with st.spinner("분석 중..."):
+            with st.spinner(“분석 중...”):
+                query_text = user_text if user_text else “첨부 파일을 분석해주세요.”
                 answer, refs, used_model = ask_frame_engine(
-                    llm, col, user_text,
-                    st.session_state.pending_image,
+                    llm, col, query_text,
+                    image_bytes,
                     url_title, url_text,
-                    st.session_state.pending_files
+                    file_summaries,
                 )
             st.markdown(answer)
-            st.caption(f"model: {used_model}")
+            st.caption(f”model: {used_model}”)
         except Exception as e:
-            answer = f"에러: {e}"
-            used_model = ""
+            answer = f”에러: {e}”
+            used_model = “”
             st.error(answer)
 
-    st.session_state.messages.append({"role":"assistant","content":answer, "meta":{"model": used_model, "attachments": attachments}})
-
-    # reset composer + attachments after send (ChatGPT처럼 한 번 보내면 첨부는 초기화)
-    st.session_state.composer = ""
-    st.session_state.pending_image = None
-    st.session_state.pending_files = []
-    st.session_state.url_cache = {"url":"", "title":"", "text":""}
+    st.session_state.messages.append({
+        “role”: “assistant”,
+        “content”: answer,
+        “meta”: {“model”: used_model, “attachments”: attachments},
+    })
     st.rerun()

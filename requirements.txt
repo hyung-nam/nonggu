@@ -1,4 +1,4 @@
-streamlit>=1.30,<2
+streamlit>=1.42,<2
 openai>=1.0,<2
 chromadb==0.4.24
 requests

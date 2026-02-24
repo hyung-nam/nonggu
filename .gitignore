@@ -15,9 +15,14 @@ __pycache__/
 
 # Data outputs (do NOT commit)
 data/
-chroma_db*/
+chroma_db_openai*/
+chroma_db_044/
+chroma_db_openai_old/
 logs/
 *.zip
+_export.jsonl
+_temp_export.jsonl
+venv/
 
 # OS
 .DS_Store

@@ -1,7 +1,9 @@
-﻿streamlit
-openai
-chromadb
+streamlit>=1.30,<2
+openai>=1.0,<2
+chromadb==0.4.24
 requests
 beautifulsoup4
 lxml
 pypdf
+python-dotenv
+numpy<2

@@ -3,18 +3,20 @@ import re
 from pathlib import Path
 from typing import Optional, Tuple, List
 
+from dotenv import load_dotenv
+load_dotenv()
+
 import streamlit as st
 import requests
 from bs4 import BeautifulSoup
 from pypdf import PdfReader
 
 import chromadb
-from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from openai import OpenAI
 
 # ========= 설정 =========
 BASE = Path(__file__).resolve().parent
-DB_DIR = BASE / "chroma_db_openai"
+DB_DIR = BASE / "chroma_db"
 COLLECTION_NAME = "tosoha1_chunks_openai"
 
 TEXT_MODEL = "gpt-5.2-pro"   # 텍스트 분석(최고급)
@@ -163,8 +165,7 @@ def load_engine():
         raise RuntimeError("OPENAI_API_KEY가 없습니다. PowerShell:  $env:OPENAI_API_KEY='sk-...'\n")
 
     vdb = chromadb.PersistentClient(path=str(DB_DIR))
-    embed_fn = OpenAIEmbeddingFunction(api_key=api_key, model_name=EMBED_MODEL)
-    col = vdb.get_collection(name=COLLECTION_NAME, embedding_function=embed_fn)
+    col = vdb.get_collection(name=COLLECTION_NAME)
     llm = OpenAI(api_key=api_key)
     return col, llm
 
@@ -197,8 +198,10 @@ def build_context_and_refs(hits):
 def ask_frame_engine(llm: OpenAI, col, user_text: str, image_bytes: Optional[bytes],
                      url_title: str, url_text: str, file_summaries: List[Tuple[str, str]]):
 
-    # RAG: 유사 프레임 힌트
-    res = col.query(query_texts=[user_text], n_results=N_RESULTS)
+    # RAG: 유사 프레임 힌트 (직접 임베딩 호출)
+    emb_resp = llm.embeddings.create(input=user_text, model=EMBED_MODEL)
+    query_vec = emb_resp.data[0].embedding
+    res = col.query(query_embeddings=[query_vec], n_results=N_RESULTS)
     hits = []
     for i in range(len(res["ids"][0])):
         hits.append((res["documents"][0][i], res["metadatas"][0][i]))

@@ -342,13 +342,6 @@ prompt = st.chat_input(
     file_type=["png", "jpg", "jpeg", "webp", "txt", "md", "csv", "json", "pdf"],
 )
 
-# templates below input
-with st.expander("템플릿 보기"):
-    st.markdown("**기본 템플릿** -- 복사해서 입력창에 붙여넣기")
-    st.code(TEMPLATE_1, language=None)
-    st.markdown("**간단 템플릿**")
-    st.code(TEMPLATE_2, language=None)
-
 # process submission
 if prompt:
     user_text = (prompt.text or "").strip()
@@ -427,3 +420,10 @@ if prompt:
         "meta": {"model": used_model, "attachments": attachments},
     })
     st.rerun()
+
+# templates at the bottom
+with st.expander("질문 템플릿 보기"):
+    st.markdown("**기본 템플릿** -- 복사해서 입력창에 붙여넣기")
+    st.code(TEMPLATE_1, language=None)
+    st.markdown("**간단 템플릿**")
+    st.code(TEMPLATE_2, language=None)

@@ -421,60 +421,10 @@ if prompt:
     })
     st.rerun()
 
-# template footer (fixed below chat input via CSS)
-_t1 = TEMPLATE_1.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-_t2 = TEMPLATE_2.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-st.markdown(
-    f"""
-<style>
-[data-testid="stBottom"] > div {{
-    padding-bottom: 44px !important;
-}}
-.tmpl-foot {{
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 999;
-    background: var(--background-color, #0e1117);
-    border-top: 1px solid rgba(128,128,128,0.25);
-    padding: 0 1rem;
-}}
-.tmpl-foot details {{
-    max-width: 860px;
-    margin: 0 auto;
-}}
-.tmpl-foot summary {{
-    cursor: pointer;
-    padding: 10px 0;
-    font-size: 0.88em;
-    color: rgba(160,160,160,0.9);
-}}
-.tmpl-foot pre {{
-    background: rgba(128,128,128,0.08);
-    padding: 10px 12px;
-    border-radius: 6px;
-    font-size: 0.82em;
-    white-space: pre-wrap;
-    max-height: 200px;
-    overflow-y: auto;
-    margin: 4px 0 10px 0;
-}}
-.tmpl-foot .lbl {{
-    font-weight: 600;
-    margin: 10px 0 4px 0;
-    font-size: 0.85em;
-}}
-</style>
-<div class="tmpl-foot">
-<details>
-<summary>질문 템플릿 보기</summary>
-<div class="lbl">기본 템플릿 -- 복사해서 입력창에 붙여넣기</div>
-<pre>{_t1}</pre>
-<div class="lbl">간단 템플릿</div>
-<pre>{_t2}</pre>
-</details>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+# template section (sidebar)
+with st.sidebar:
+    with st.expander("질문 템플릿 보기", expanded=False):
+        st.caption("복사해서 입력창에 붙여넣기")
+        st.code(TEMPLATE_1, language=None)
+        st.markdown("---")
+        st.code(TEMPLATE_2, language=None)
